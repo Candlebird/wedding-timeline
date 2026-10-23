@@ -25,5 +25,6 @@ Port 8765 on 127.0.0.1/localhost is in the wedding API's CORS list, so online sa
 | Roles | Items with no roles are for everyone and show under every filter. Rename, recolor (click the swatch) or delete roles via **Edit roles**. |
 | Now / Next | On the wedding day the panel shows what's on now (with time left) and what's next, past items fade, and the current item gets a progress bar. Before the day it shows a countdown. Refreshes every 30 s. |
 | Print | Prints the timeline; if a role is selected, only that role's schedule, headed "Schedule for: …". |
-| Start from a typical day | Fills in a sample 12:00–22:15 day with six roles. Undo removes it. |
+| Start from a typical day | Asks when the day starts and ends (12:00–22:15 by default), then fills in a sample day with six roles fitted to that window. Getting ready, cocktail hour, dinner and dancing stretch or shrink; the ceremony, toasts, dances and other set pieces keep their length. A day shorter than about 6 hours shrinks everything evenly. Times round to 5 minutes. Undo removes it. |
+| Same start time | Items that start at the same time share one row ("2 at once"), side by side on wide screens and stacked on phones. Now/Next lists all of them. |
 | Keyboard | N adds an item, Esc closes dialogs. |

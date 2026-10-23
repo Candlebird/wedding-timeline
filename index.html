@@ -356,6 +356,19 @@
   </form>
 </div>
 
+<div class="modal-back" id="tplModal" role="dialog" aria-modal="true" aria-labelledby="tplHead">
+  <form class="modal sm" id="tplForm" autocomplete="off">
+    <h2 id="tplHead">Start from a typical day</h2>
+    <p>Pick when your day starts and ends. The sample schedule is fitted in between, and you can change any part of it afterwards.</p>
+    <div class="grid2">
+      <label>Day starts <input type="time" id="tStart" required></label>
+      <label>Day ends <input type="time" id="tEnd" required></label>
+    </div>
+    <p class="muted" id="tplPreview" aria-live="polite"></p>
+    <div class="row"><span class="spacer"></span><button type="button" id="tplCancel">Cancel</button><button type="submit" class="primary">Add the day</button></div>
+  </form>
+</div>
+
 <div class="modal-back" id="rolesModal" role="dialog" aria-modal="true" aria-labelledby="rolesHead">
   <div class="modal sm">
     <h2 id="rolesHead">Roles</h2>
@@ -730,28 +743,75 @@
   $('rolesDone').onclick = closeModals;
 
   // ---------- template ----------
+  // A typical 12:00–22:15 day. Roles are names here and become real roles when the template is added.
+  const TEMPLATE = [
+    ['12:00', 90, 'Hair & makeup', 'Bridal suite', '', ['Couple', 'Wedding party']],
+    ['13:30', 60, 'Getting-ready photos', 'Bridal suite', 'Details: rings, invitation, shoes, flowers.', ['Photographer', 'Couple', 'Wedding party']],
+    ['14:30', 25, 'Guests arrive', '', 'Ushers seat guests; prelude music.', ['Venue & catering', 'Wedding party', 'DJ']],
+    ['15:00', 30, 'Ceremony', 'Garden', '', []],
+    ['15:30', 45, 'Family & group photos', '', 'Shot list:\n- Couple with each set of parents\n- Immediate families\n- Wedding party', ['Photographer', 'Couple', 'Family', 'Wedding party']],
+    ['15:30', 60, 'Cocktail hour', 'Terrace', '', ['Venue & catering', 'DJ']],
+    ['16:30', 10, 'Grand entrance', 'Reception hall', '', ['DJ', 'Couple', 'Wedding party']],
+    ['16:45', 60, 'Dinner', 'Reception hall', '', ['Venue & catering']],
+    ['17:45', 20, 'Toasts', '', 'Best man, maid of honor, then parents.', ['DJ', 'Wedding party', 'Family', 'Photographer']],
+    ['18:10', 10, 'First dance', '', 'Song:', ['Couple', 'DJ', 'Photographer']],
+    ['18:20', 15, 'Parent dances', '', '', ['Couple', 'Family', 'DJ', 'Photographer']],
+    ['18:40', 15, 'Cake cutting', '', '', ['Couple', 'Venue & catering', 'Photographer']],
+    ['18:55', 185, 'Open dancing', '', '', ['DJ']],
+    ['22:00', 15, 'Last dance & send-off', 'Front steps', 'Sparklers handed out 10 minutes before.', []],
+  ];
+  const T_START = toMin(TEMPLATE[0][0]), T_END = Math.max(...TEMPLATE.map(([t, d]) => toMin(t) + d));
+  // Stretches that grow or shrink to fit the chosen day: getting ready, cocktail hour, dinner and dancing.
+  // Everything else (ceremony, toasts, first dance…) keeps its length.
+  const FLEX = [['12:00', 90], ['15:30', 60], ['16:45', 60], ['18:55', 185]].map(([t, d]) => [toMin(t), toMin(t) + d]);
+  const FLEX_LEN = FLEX.reduce((n, [a, b]) => n + b - a, 0), FIXED_LEN = T_END - T_START - FLEX_LEN;
+  // Maps a template minute onto the chosen day. If the day is too short for the fixed parts, everything shrinks evenly.
+  function fitter(start, end) {
+    const span = end - start, round5 = m => Math.round(m / 5) * 5;
+    if (span < FIXED_LEN + 30) return m => start + round5((m - T_START) * span / (T_END - T_START));
+    const k = (span - FIXED_LEN) / FLEX_LEN;
+    return m => {
+      let out = 0, prev = T_START;
+      for (const [a, b] of FLEX) {
+        if (m <= a) break;
+        out += a - prev + (Math.min(m, b) - a) * k;
+        prev = Math.min(m, b);
+        if (m <= b) return start + round5(out);
+      }
+      return start + round5(out + m - prev);
+    };
+  }
+  // End times before 04:00 count as the next morning, so a day can run past midnight.
+  const tplSpan = () => {
+    const start = toMin($('tStart').value), end = toMin($('tEnd').value);
+    return Number.isNaN(start) || Number.isNaN(end) || end <= start ? null : [start, end];
+  };
+  function previewTemplate() {
+    const sp = tplSpan(), ok = !!sp;
+    $('tplForm').querySelector('[type=submit]').disabled = !ok;
+    if (!ok) { $('tplPreview').textContent = 'The day has to end after it starts.'; return; }
+    const fit = fitter(...sp), at = title => fmtTime(fit(toMin(TEMPLATE.find(r => r[2] === title)[0])));
+    $('tplPreview').textContent = `Ceremony at ${at('Ceremony')}, dinner at ${at('Dinner')}, first dance at ${at('First dance')}.`;
+  }
   $('useTemplate').onclick = () => {
-    const snap = snapshot();
-    const ids = {};
+    $('tStart').value = TEMPLATE[0][0]; $('tEnd').value = hhmm(T_END);
+    previewTemplate();
+    openModal('tplModal');
+    $('tStart').focus();
+  };
+  $('tStart').oninput = $('tEnd').oninput = previewTemplate;
+  $('tplCancel').onclick = closeModals;
+  $('tplForm').onsubmit = e => {
+    e.preventDefault();
+    const sp = tplSpan();
+    if (!sp) return;
+    const snap = snapshot(), fit = fitter(...sp), ids = {};
     for (const name of ['Couple', 'Wedding party', 'Family', 'Photographer', 'DJ', 'Venue & catering']) ids[name] = addRole(name).id;
-    const R = (...names) => names.map(n => ids[n]);
-    const T = [
-      ['12:00', 90, 'Hair & makeup', 'Bridal suite', '', R('Couple', 'Wedding party')],
-      ['13:30', 60, 'Getting-ready photos', 'Bridal suite', 'Details: rings, invitation, shoes, flowers.', R('Photographer', 'Couple', 'Wedding party')],
-      ['14:30', 25, 'Guests arrive', '', 'Ushers seat guests; prelude music.', R('Venue & catering', 'Wedding party', 'DJ')],
-      ['15:00', 30, 'Ceremony', 'Garden', '', []],
-      ['15:30', 45, 'Family & group photos', '', 'Shot list:\n- Couple with each set of parents\n- Immediate families\n- Wedding party', R('Photographer', 'Couple', 'Family', 'Wedding party')],
-      ['15:30', 60, 'Cocktail hour', 'Terrace', '', R('Venue & catering', 'DJ')],
-      ['16:30', 10, 'Grand entrance', 'Reception hall', '', R('DJ', 'Couple', 'Wedding party')],
-      ['16:45', 60, 'Dinner', 'Reception hall', '', R('Venue & catering')],
-      ['17:45', 20, 'Toasts', '', 'Best man, maid of honor, then parents.', R('DJ', 'Wedding party', 'Family', 'Photographer')],
-      ['18:10', 10, 'First dance', '', 'Song:', R('Couple', 'DJ', 'Photographer')],
-      ['18:20', 15, 'Parent dances', '', '', R('Couple', 'Family', 'DJ', 'Photographer')],
-      ['18:40', 15, 'Cake cutting', '', '', R('Couple', 'Venue & catering', 'Photographer')],
-      ['18:55', 185, 'Open dancing', '', '', R('DJ')],
-      ['22:00', 15, 'Last dance & send-off', 'Front steps', 'Sparklers handed out at 21:50.', []],
-    ];
-    state.items.push(...T.map(([time, dur, title, place, notes, roles]) => ({ id: rid(), time, dur, title, place, notes, roles })));
+    state.items.push(...TEMPLATE.map(([time, dur, title, place, notes, roles]) => {
+      const s = fit(toMin(time)), e = fit(toMin(time) + dur);
+      return { id: rid(), time: hhmm(s), dur: Math.max(5, e - s), title, place, notes, roles: roles.map(n => ids[n]) };
+    }));
+    closeModals();
     commit();
     flash('Added a typical day. Tap any item to change it', { undo: snap });
   };
