@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wedding Timeline</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --panel: #ffffff;
+    --panel-2: #faf9f7;
+    --sunken: #f1efeb;
+    --border: #e6e3dd;
+    --border-strong: #d4d0c8;
+    --text: #1c1e21;
+    --text-2: #474b52;
+    --muted: #82868d;
+    --accent: #4057d6;
+    --accent-hover: #3247bd;
+    --ring: rgba(64, 87, 214, .28);
+    --danger: #d0453f;
+    --heart: #e0607e;
+    --shadow-sm: 0 1px 2px rgba(28, 30, 33, .06), 0 1px 3px rgba(28, 30, 33, .08);
+    --shadow-md: 0 6px 16px rgba(28, 30, 33, .10), 0 2px 4px rgba(28, 30, 33, .06);
+    --shadow-lg: 0 20px 50px rgba(28, 30, 33, .22), 0 6px 16px rgba(28, 30, 33, .10);
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  [hidden], body:not(.view) .view-only, body.view .edit-only { display: none !important; }
+  html, body { margin: 0; }
+  body {
+    font: 13.5px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  .i {
+    width: 16px; height: 16px; flex: none;
+    fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .muted { color: var(--muted); }
+  .spacer { flex: 1; }
+
+  /* Controls */
+  button, .menu > summary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    height: 32px; padding: 0 12px; white-space: nowrap;
+    background: var(--panel); color: var(--text-2); font-weight: 500;
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+    cursor: pointer; touch-action: manipulation;
+    transition: background-color .15s, border-color .15s, box-shadow .15s, color .15s, transform .1s;
+  }
+  button:hover:not(:disabled), .menu > summary:hover { background: var(--panel-2); border-color: #bcb7ad; color: var(--text); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .4; cursor: default; }
+  button:focus-visible, .menu > summary:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, .card:focus-visible {
+    outline: none; box-shadow: 0 0 0 3px var(--ring);
+  }
+  button.primary {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    box-shadow: 0 1px 2px rgba(64, 87, 214, .35), inset 0 1px 0 rgba(255, 255, 255, .14);
+  }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: #fff; }
+  button.ghost { background: transparent; border-color: transparent; }
+  button.ghost:hover:not(:disabled) { background: var(--sunken); border-color: transparent; }
+  button.danger { color: var(--danger); }
+  button.danger:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); background: #fdeceb; }
+  button.icon { width: 32px; padding: 0; }
+  button.on { background: var(--text); border-color: var(--text); color: #fff; }
+  button.on:hover:not(:disabled) { background: #33363b; border-color: #33363b; color: #fff; }
+  input[type=text], input[type=time], input[type=number], input[type=date], input:not([type]), select, textarea {
+    display: block; width: 100%; height: 36px; padding: 0 10px; margin-top: 4px;
+    background: var(--panel); border: 1px solid var(--border-strong); border-radius: var(--radius);
+    font-weight: 400; color: var(--text);
+  }
+  textarea { height: auto; padding: 8px 10px; resize: vertical; line-height: 1.4; }
+
+  /* Header */
+  header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, .92);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0; }
+  .brand .logo {
+    width: 30px; height: 30px; border-radius: 8px; flex: none;
+    display: grid; place-items: center; background: var(--heart); color: #fff;
+  }
+  .brand h1 { margin: 0; font-size: 15px; font-weight: 650; white-space: nowrap; }
+  #share em { font-style: normal; }
+  .menu { position: relative; }
+  .menu > summary { list-style: none; width: 32px; padding: 0; }
+  .menu > summary::-webkit-details-marker { display: none; }
+  .menu-pop {
+    position: absolute; right: 0; top: 38px; z-index: 30; min-width: 210px;
+    display: flex; flex-direction: column; padding: 6px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-md);
+  }
+  .menu-pop button { justify-content: flex-start; border: none; height: 34px; background: transparent; }
+  .menu-pop button:hover:not(:disabled) { background: var(--sunken); }
+
+  /* Page */
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 96px; }
+  .viewbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 14px; padding: 8px 12px; border-radius: 10px;
+    background: #ebeefc; color: #2c3a8c; font-size: 13px;
+  }
+  .viewbar a { color: inherit; font-weight: 600; margin-left: auto; }
+  #title {
+    margin: 0; padding: 2px 6px; margin-left: -6px; height: auto;
+    border: 1px solid transparent; border-radius: var(--radius); background: transparent;
+    font-size: 28px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25;
+  }
+  body:not(.view) #title:hover { background: var(--sunken); }
+  body:not(.view) #title:focus { background: var(--panel); border-color: var(--border-strong); }
+  .dateline { display: flex; align-items: center; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+  #date { width: auto; margin: 0; height: 32px; }
+  body.view #date { border-color: transparent; background: transparent; padding: 0; pointer-events: none; font-weight: 600; }
+  #dateNote { color: var(--muted); }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+  .filters:empty { display: none; }
+  .chip { height: 30px; border-radius: 999px; padding: 0 12px; font-size: 13px; }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .chip.on i { box-shadow: 0 0 0 2px #fff; }
+
+  #nowPanel {
+    margin-top: 16px; padding: 10px 14px;
+    background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--heart);
+    border-radius: 10px; box-shadow: var(--shadow-sm);
+  }
+  .nrow { padding: 4px 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .nrow[data-id] { cursor: pointer; }
+  .nrow .k {
+    min-width: 64px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--heart);
+  }
+
+  /* Timeline */
+  #timeline { list-style: none; margin: 20px 0 0; padding: 0; }
+  .item, .gap { display: grid; grid-template-columns: 84px 18px 1fr; gap: 0 12px; }
+  .when { text-align: right; padding-top: 9px; font-variant-numeric: tabular-nums; }
+  .when b { display: block; font-size: 14px; }
+  .when span { color: var(--muted); font-size: 12px; }
+  .rail { position: relative; }
+  .rail::before { content: ""; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border-strong); }
+  #timeline > :first-child .rail::before { top: 16px; }
+  #timeline > :last-child .rail::before { bottom: auto; height: 16px; }
+  #timeline > :only-child .rail::before { display: none; }
+  .item .rail::after {
+    content: ""; position: absolute; left: 3px; top: 11px; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--panel); border: 3px solid var(--c);
+  }
+  .item.now .rail::after { background: var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent); }
+  .gap .rail::before { background: repeating-linear-gradient(var(--border-strong) 0 4px, transparent 4px 8px); }
+  .gap .txt { color: var(--muted); font-size: 12px; font-style: italic; padding: 0 0 12px 2px; }
+  .card {
+    position: relative; margin-bottom: 12px; padding: 10px 14px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+  body:not(.view) .card { cursor: pointer; }
+  body:not(.view) .card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+  .item.past { opacity: .5; }
+  .item.now .card { border-color: color-mix(in srgb, var(--c) 55%, white); }
+  .item.flash .card { animation: flash 1.2s; }
+  @keyframes flash { 0%, 40% { box-shadow: 0 0 0 4px var(--ring); } }
+  .card .t { font-weight: 600; font-size: 15px; padding-right: 56px; }
+  .meta { display: flex; gap: 4px 12px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px; margin-top: 1px; }
+  .meta:empty { display: none; }
+  .meta span { display: inline-flex; gap: 4px; align-items: center; }
+  .meta .i { width: 13px; height: 13px; }
+  .notes { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); margin-top: 6px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .tags:empty { display: none; }
+  .tag {
+    font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    color: color-mix(in srgb, var(--c) 72%, black); background: color-mix(in srgb, var(--c) 14%, white);
+  }
+  .tag.all { --c: #82868d; }
+  .badge {
+    position: absolute; top: 10px; right: 12px; padding: 2px 8px; border-radius: 999px;
+    background: var(--c); color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .prog { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
+  .prog i { display: block; height: 100%; background: var(--c); }
+
+  .add-row { width: 100%; height: 44px; margin-top: 4px; border-style: dashed; background: transparent; }
+  .emptycard {
+    margin-top: 24px; padding: 28px 24px; text-align: center;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-sm);
+  }
+  .emptycard h2 { margin: 0 0 6px; font-size: 18px; }
+  .emptycard p { margin: 0 auto 18px; max-width: 460px; color: var(--text-2); }
+  .emptycard .row { justify-content: center; flex-wrap: wrap; }
+
+  /* Modals */
+  .modal-back {
+    position: fixed; inset: 0; z-index: 100; padding: 12px;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(20, 22, 26, .4);
+  }
+  .modal-back.open { display: flex; }
+  .modal {
+    width: 480px; max-width: 100%; max-height: calc(100dvh - 24px); overflow: auto;
+    padding: 20px; background: var(--panel); border-radius: 12px; box-shadow: var(--shadow-lg);
+  }
+  .modal.sm { width: 440px; }
+  .modal h2 { margin: 0 0 4px; font-size: 17px; }
+  .modal p { margin: 4px 0 8px; color: var(--text-2); }
+  .modal label, .modal .lbl { display: block; margin-top: 12px; font-weight: 600; font-size: 12.5px; color: var(--text-2); }
+  .modal label .muted, .modal .lbl .muted { font-weight: 400; }
+  .row { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rolepick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
+  .rolepick input { width: 150px; height: 30px; margin: 0; border-radius: 999px; }
+  .copyrow { display: flex; gap: 6px; margin-top: 4px; }
+  .copyrow input { margin: 0; }
+  #roleList { list-style: none; margin: 10px 0 0; padding: 0; }
+  #roleList li { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
+  #roleList input { margin: 0; }
+  .sw { width: 32px; padding: 0; flex: none; }
+  .sw::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+  #roleAdd { margin-top: 10px; }
+  #roleAdd input { margin: 0; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 20px; z-index: 200; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px);
+    padding: 8px 8px 8px 14px; border-radius: 10px;
+    background: #24272c; color: #fff; box-shadow: var(--shadow-lg);
+  }
+  .toast.error { background: var(--danger); }
+  .toast button { height: 28px; background: transparent; color: #fff; border-color: rgba(255, 255, 255, .35); }
+  .toast button:hover:not(:disabled) { background: rgba(255, 255, 255, .12); color: #fff; border-color: rgba(255, 255, 255, .5); }
+
+  @media (max-width: 600px) {
+    header { padding: 8px 12px; gap: 6px; }
+    header .lbl { display: none; }
+    header button { padding: 0 9px; }
+    main { padding: 18px 12px 96px; }
+    #title { font-size: 23px; }
+    .item, .gap { grid-template-columns: 62px 18px 1fr; gap: 0 8px; }
+    .when b { font-size: 13px; }
+    .card { padding: 9px 12px; }
+    .grid2 { grid-template-columns: 1fr 1fr; gap: 8px; }
+  }
+
+  @media print {
+    @page { margin: 14mm; }
+    header, .viewbar, #nowPanel, #addItem, #empty, .toast, .modal-back, #editRoles, .chip:not(.on) { display: none !important; }
+    body { background: #fff; }
+    main { max-width: none; padding: 0; }
+    #title { font-size: 22pt; }
+    #date { border: none; padding: 0; font-weight: 600; }
+    .filters .chip.on { border: none; padding: 0; height: auto; background: none; color: #000; font-weight: 600; }
+    .filters .chip.on::before { content: "Schedule for:"; font-weight: 400; color: var(--muted); }
+    .filters .chip.on i { display: none; }
+    .item { break-inside: avoid; }
+    .item.past { opacity: 1; }
+    .card { box-shadow: none; }
+    .badge, .prog { display: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+</svg>
+
+<header>
+  <div class="brand">
+    <div class="logo"><svg class="i"><use href="#i-heart"/></svg></div>
+    <h1>Wedding Timeline</h1>
+  </div>
+  <button id="nowBtn" title="What's happening now and next"><svg class="i"><use href="#i-clock"/></svg><span class="lbl">Now</span></button>
+  <button id="printBtn" title="Print the timeline (only the selected role, if one is picked)"><svg class="i"><use href="#i-print"/></svg><span class="lbl">Print</span></button>
+  <button id="share"><svg class="i"><use href="#i-cloud"/></svg><span class="lbl" id="shareLabel">Share</span></button>
+  <details class="menu" id="menu">
+    <summary title="More"><svg class="i"><use href="#i-more"/></svg></summary>
+    <div class="menu-pop">
+      <button id="exportBtn" class="edit-only"><svg class="i"><use href="#i-down"/></svg>Download a backup (.json)</button>
+      <button id="importBtn" class="edit-only"><svg class="i"><use href="#i-up"/></svg>Open a backup…</button>
+      <button id="resetBtn" class="edit-only"><svg class="i"><use href="#i-reset"/></svg>Start over</button>
+      <button id="ownBtn" class="view-only"><svg class="i"><use href="#i-heart"/></svg>Open my own timeline</button>
+    </div>
+  </details>
+  <input type="file" id="importFile" accept=".json,application/json" hidden>
+</header>
+
+<main>
+  <div class="viewbar view-only"><svg class="i"><use href="#i-eye"/></svg><span>View only</span><span class="muted" id="updated"></span></div>
+  <input id="title" placeholder="Our wedding day" maxlength="120" aria-label="Title" autocomplete="off">
+  <div class="dateline">
+    <input type="date" id="date" aria-label="Wedding date">
+    <span id="dateNote"></span>
+  </div>
+  <div class="filters" id="filters"></div>
+  <div id="nowPanel" hidden></div>
+  <ol id="timeline"></ol>
+  <p class="muted" id="noMatch" hidden>Nothing on the timeline for this role yet.</p>
+  <button class="add-row" id="addItem"><svg class="i"><use href="#i-plus"/></svg>Add to the timeline</button>
+  <div class="emptycard" id="empty" hidden>
+    <h2 id="emptyHead">Plan the day, minute by minute</h2>
+    <p id="emptyText">Add each part of the day with its time, place and who's involved. Then share a read-only link with your
+      vendors, family and wedding party, filtered to just their part.</p>
+    <div class="row edit-only">
+      <button class="primary" id="useTemplate">Start from a typical day</button>
+      <button id="startBlank"><svg class="i"><use href="#i-plus"/></svg>Add the first item</button>
+    </div>
+  </div>
+</main>
+
+<div class="modal-back" id="itemModal" role="dialog" aria-modal="true" aria-labelledby="itemHead">
+  <form class="modal" id="itemForm" autocomplete="off">
+    <h2 id="itemHead">Add to the timeline</h2>
+    <div class="grid2">
+      <label>Starts <input type="time" id="fTime" required></label>
+      <label>Takes <span class="muted">(minutes)</span> <input type="number" id="fDur" min="0" max="1440" step="5" inputmode="numeric"></label>
+    </div>
+    <label>What <input id="fTitle" placeholder="Ceremony" maxlength="120"></label>
+    <label>Where <input id="fPlace" placeholder="Garden terrace" maxlength="120"></label>
+    <label>Notes <textarea id="fNotes" rows="3" maxlength="2000" placeholder="Songs, shot list, who brings what…"></textarea></label>
+    <div class="lbl">Who's involved <span class="muted">· none picked means everyone</span></div>
+    <div class="rolepick" id="fRoles"></div>
+    <div class="row">
+      <button type="button" class="danger" id="fDelete">Delete</button>
+      <button type="button" id="fDup" title="Add a copy that starts when this one ends">Duplicate</button>
+      <span class="spacer"></span>
+      <button type="button" id="fCancel">Cancel</button>
+      <button type="submit" class="primary">Save</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-back" id="rolesModal" role="dialog" aria-modal="true" aria-labelledby="rolesHead">
+  <div class="modal sm">
+    <h2 id="rolesHead">Roles</h2>
+    <p>Tag timeline items with the people or vendors involved. Then anyone can filter the timeline, print it, or open a
+      view link showing only their part.</p>
+    <ul id="roleList"></ul>
+    <form id="roleAdd" class="copyrow" autocomplete="off">
+      <input id="newRole" placeholder="Photographer, DJ, Family…" maxlength="40" aria-label="New role">
+      <button type="submit"><svg class="i"><use href="#i-plus"/></svg>Add</button>
+    </form>
+    <div class="row"><span class="spacer"></span><button class="primary" id="rolesDone">Done</button></div>
+  </div>
+</div>
+
+<div class="modal-back" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shareHead">
+  <div class="modal sm">
+    <h2 id="shareHead">Share the timeline</h2>
+    <div id="shareOff">
+      <p>Save the timeline online so it opens on any device. You get two links: one for editing, and a read-only one for
+        vendors, family and the wedding party.</p>
+      <div class="row"><span class="spacer"></span><button id="shareCancel">Cancel</button><button class="primary" id="goOnline">Save online</button></div>
+    </div>
+    <div id="shareOn">
+      <p class="edit-only">Every change saves online.</p>
+      <label class="edit-only">Edit link <span class="muted">· anyone with it can change the timeline</span>
+        <span class="copyrow"><input type="text" id="editLink" readonly><button type="button" data-copy="editLink">Copy</button></span></label>
+      <label>View link <span class="muted">· read-only</span>
+        <span class="copyrow"><input type="text" id="viewLink" readonly><button type="button" data-copy="viewLink">Copy</button></span></label>
+      <label>The view link shows <select id="viewRole"></select></label>
+      <div class="row">
+        <button class="edit-only" id="unlink" title="This device keeps its copy, but stops saving online">Stop syncing here</button>
+        <span class="spacer"></span>
+        <button class="primary" id="shareDone">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden><span id="toastText"></span><button id="toastUndo" hidden>Undo</button></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const rid = () => Math.random().toString(36).slice(2, 10);
+  const COLORS = ['#e0607e', '#8e6cd8', '#4057d6', '#2a9bb0', '#2f9e58', '#e08a2e', '#b5651d', '#82868d'];
+  const STORE = 'weddingTimeline.data', CLOUD_KEY = 'weddingTimeline.cloud', FILTER_KEY = 'weddingTimeline.filter';
+  // Times before 4 AM belong to the night after the wedding (an after-party at 12:30 AM sorts last)
+  const DAY_START = 4 * 60;
+
+  const blank = () => ({ title: '', date: '', roles: [], items: [] });
+  let state = blank();
+  let mode = 'edit';        // 'view' when opened from a read-only link
+  let filter = null;        // role id, or null for everyone
+  let showNow = false;
+  let loaded = true;        // false while a view link is still loading
+
+  function normalize(d) {
+    const s = blank();
+    if (!d || typeof d !== 'object') return s;
+    s.title = String(d.title ?? '').slice(0, 120);
+    s.date = /^\d{4}-\d{2}-\d{2}$/.test(d.date) ? d.date : '';
+    s.roles = (Array.isArray(d.roles) ? d.roles : []).filter(r => r && r.id).map((r, i) => ({
+      id: String(r.id), name: String(r.name ?? 'Role').slice(0, 40),
+      color: /^#[0-9a-f]{6}$/i.test(r.color) ? r.color : COLORS[i % COLORS.length],
+    }));
+    const ids = new Set(s.roles.map(r => r.id));
+    s.items = (Array.isArray(d.items) ? d.items : []).filter(it => it && /^\d{2}:\d{2}$/.test(it.time)).map(it => ({
+      id: String(it.id || rid()), time: it.time,
+      dur: Math.max(0, Math.min(1440, Math.round(+it.dur || 0))),
+      title: String(it.title ?? '').slice(0, 120), place: String(it.place ?? '').slice(0, 120), notes: String(it.notes ?? '').slice(0, 2000),
+      roles: (Array.isArray(it.roles) ? it.roles : []).map(String).filter(r => ids.has(r)),
+    }));
+    return s;
+  }
+
+  // ---------- time ----------
+  const toMin = t => { const [h, m] = t.split(':').map(Number), v = h * 60 + m; return v < DAY_START ? v + 1440 : v; };
+  const hhmm = min => { min = ((min % 1440) + 1440) % 1440; return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`; };
+  const fmtTime = min => new Date(2000, 0, 1, 0, min).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const fmtDur = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`;
+  const fmtLeft = m => fmtDur(Math.max(1, Math.ceil(m)));
+  const endOf = it => toMin(it.time) + Math.max(1, it.dur);
+  const roleById = id => state.roles.find(r => r.id === id);
+  const sorted = () => state.items.slice().sort((a, b) => toMin(a.time) - toMin(b.time) || a.title.localeCompare(b.title));
+  // Items without roles are for everyone, so they show under every filter
+  const visible = () => sorted().filter(it => !filter || !it.roles.length || it.roles.includes(filter));
+  function eventDate() {
+    if (!state.date) return null;
+    const [y, m, d] = state.date.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const nowMin = () => (Date.now() - eventDate().getTime()) / 60000;  // minutes since midnight of the wedding day
+  const isEventDay = () => { if (!state.date) return false; const n = nowMin(); return n >= 0 && n < 1440 + DAY_START; };
+  const daysUntil = () => { const t = new Date(); return Math.round((eventDate() - new Date(t.getFullYear(), t.getMonth(), t.getDate())) / 86400000); };
+
+  // ---------- render ----------
+  function render() {
+    document.body.classList.toggle('view', mode === 'view');
+    if (document.activeElement !== $('title')) $('title').value = state.title;
+    $('title').readOnly = $('date').readOnly = mode === 'view';
+    $('date').value = state.date;
+    $('dateNote').textContent = dateNote();
+    document.title = state.title ? `${state.title} · Wedding Timeline` : 'Wedding Timeline';
+    renderFilters();
+    renderList();
+    renderNow();
+  }
+  function dateNote() {
+    if (!state.date) return mode === 'edit' ? 'Pick the date to see the countdown and what\'s on now' : '';
+    const d = daysUntil(), day = eventDate().toLocaleDateString([], { weekday: 'long' });
+    const rel = d === 0 ? 'today' : d === 1 ? 'tomorrow' : d === -1 ? 'yesterday' : d > 0 ? `in ${d} days` : `${-d} days ago`;
+    return `${day} · ${rel}`;
+  }
+  function renderFilters() {
+    if (filter && !roleById(filter)) filter = null;
+    $('filters').innerHTML = (state.roles.length
+      ? `<button class="chip${filter ? '' : ' on'}" data-role="">Everyone</button>` +
+        state.roles.map(r => `<button class="chip${filter === r.id ? ' on' : ''}" data-role="${r.id}" style="--c:${r.color}"><i></i>${esc(r.name)}</button>`).join('')
+      : '') +
+      (mode === 'edit' && state.items.length ? `<button class="chip ghost" id="editRoles"><svg class="i"><use href="#i-users"/></svg>${state.roles.length ? 'Edit roles' : 'Add roles (photographer, DJ, family…)'}</button>` : '');
+  }
+  function renderList() {
+    const items = visible(), nm = isEventDay() ? nowMin() : null;
+    let html = '', lastEnd = null;
+    for (const it of items) {
+      const s = toMin(it.time), e = s + it.dur, end = endOf(it);
+      if (lastEnd !== null && s - lastEnd >= 5) html += `<li class="gap"><div></div><div class="rail"></div><div class="txt">${fmtDur(s - lastEnd)} free</div></li>`;
+      lastEnd = lastEnd === null ? e : Math.max(lastEnd, e);
+      const roles = it.roles.map(roleById).filter(Boolean);
+      const st = nm === null ? '' : nm >= end ? 'past' : nm >= s ? 'now' : '';
+      const meta = [it.place ? `<span><svg class="i"><use href="#i-pin"/></svg>${esc(it.place)}</span>` : '', it.dur ? `<span>${fmtDur(it.dur)}</span>` : ''].join('');
+      const tags = roles.length ? roles.map(r => `<span class="tag" style="--c:${r.color}">${esc(r.name)}</span>`).join('')
+        : state.roles.length ? '<span class="tag all">Everyone</span>' : '';
+      html += `<li class="item ${st}" data-id="${it.id}" style="--c:${roles[0]?.color || 'var(--accent)'}">
+        <div class="when"><b>${fmtTime(s)}</b>${it.dur ? `<span>${fmtTime(e)}</span>` : ''}</div>
+        <div class="rail"></div>
+        <div class="card"${mode === 'edit' ? ' tabindex="0" role="button"' : ''}>
+          ${st === 'now' ? `<span class="badge">Now</span><div class="prog"><i style="width:${Math.round((nm - s) / (end - s) * 100)}%"></i></div>` : ''}
+          <div class="t">${esc(it.title) || '<span class="muted">Untitled</span>'}</div>
+          <div class="meta">${meta}</div>
+          ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ''}
+          <div class="tags">${tags}</div>
+        </div></li>`;
+    }
+    $('timeline').innerHTML = html;
+    const empty = !state.items.length;
+    $('empty').hidden = !empty;
+    if (mode === 'view') {
+      $('emptyHead').textContent = loaded ? 'Nothing on the timeline yet' : 'Loading the timeline…';
+      $('emptyText').textContent = loaded ? 'Check back later; this page picks up changes on its own.' : '';
+    }
+    $('noMatch').hidden = empty || items.length > 0;
+    $('addItem').hidden = mode !== 'edit' || empty;
+  }
+  function renderNow() {
+    const today = isEventDay();
+    $('nowBtn').classList.toggle('on', showNow || today);
+    if (!showNow && !today) { $('nowPanel').hidden = true; return; }
+    const items = visible(), rows = [];
+    const row = (k, it, extra) => `<div class="nrow" data-id="${it.id}"><span class="k">${k}</span><b>${esc(it.title || 'Untitled')}</b>` +
+      `<span class="muted">${fmtTime(toMin(it.time))}${it.place ? ' · ' + esc(it.place) : ''}${extra ? ' · ' + extra : ''}</span></div>`;
+    if (!state.date) {
+      rows.push(`<div class="nrow"><span class="k">Now</span><span>${mode === 'edit' ? 'Set the date to see what\'s happening on the day.' : 'The date isn\'t set yet.'}</span></div>`);
+    } else if (!today) {
+      const d = daysUntil();
+      rows.push(`<div class="nrow"><span class="k">${d > 0 ? 'Countdown' : 'Done'}</span><span>${d > 0 ? `The day is ${d === 1 ? 'tomorrow' : `in ${d} days`}` : 'The day has been and gone. Congratulations!'}</span></div>`);
+      if (d > 0 && items[0]) rows.push(row('First up', items[0]));
+    } else {
+      const nm = nowMin();
+      const cur = items.filter(it => nm >= toMin(it.time) && nm < endOf(it));
+      const next = items.find(it => toMin(it.time) > nm);
+      cur.forEach(it => rows.push(row('Now', it, it.dur ? `${fmtLeft(endOf(it) - nm)} left` : '')));
+      if (next) rows.push(row(cur.length ? 'Next' : 'Up next', next, `in ${fmtLeft(toMin(next.time) - nm)}`));
+      if (!cur.length && !next) rows.push(`<div class="nrow"><span class="k">Done</span><span>${items.length ? 'That\'s everything on the timeline. Congratulations!' : 'Nothing on the timeline.'}</span></div>`);
+    }
+    $('nowPanel').innerHTML = rows.join('');
+    $('nowPanel').hidden = false;
+  }
+  function reveal(id) {
+    const el = $('timeline').querySelector(`.item[data-id="${id}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  }
+  // Keep "now" current through the day
+  setInterval(() => { if (isEventDay() || showNow) { renderList(); renderNow(); } }, 30000);
+
+  // ---------- saving ----------
+  const snapshot = () => JSON.stringify(state);
+  function saveLocal() {
+    if (mode !== 'edit') return;
+    try { localStorage.setItem(STORE, JSON.stringify(state)); } catch {}
+  }
+  function commit() { saveLocal(); render(); cloudDirty(); }
+  function restoreFrom(snap, msg) { state = normalize(JSON.parse(snap)); commit(); if (msg) flash(msg); }
+
+  let toastTimer;
+  function flash(msg, { undo, error } = {}) {
+    $('toastText').textContent = msg;
+    $('toast').classList.toggle('error', !!error);
+    $('toastUndo').hidden = !undo;
+    $('toastUndo').onclick = () => { $('toast').hidden = true; restoreFrom(undo, 'Undone'); };
+    $('toast').hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $('toast').hidden = true; }, undo ? 7000 : 3500);
+  }
+
+  // ---------- filters, now, header ----------
+  $('filters').addEventListener('click', e => {
+    if (e.target.closest('#editRoles')) { openRoles(); return; }
+    const b = e.target.closest('.chip[data-role]');
+    if (!b) return;
+    filter = b.dataset.role || null;
+    if (mode === 'edit') try { filter ? localStorage.setItem(FILTER_KEY, filter) : localStorage.removeItem(FILTER_KEY); } catch {}
+    render();
+  });
+  $('nowBtn').onclick = () => {
+    showNow = isEventDay() ? true : !showNow;
+    renderNow();
+    if (isEventDay()) {
+      const nm = nowMin(), it = visible().find(it => endOf(it) > nm);
+      if (it) reveal(it.id);
+    } else if (showNow) $('nowPanel').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
+  $('nowPanel').addEventListener('click', e => { const r = e.target.closest('.nrow[data-id]'); if (r) reveal(r.dataset.id); });
+  $('printBtn').onclick = () => window.print();
+  $('title').addEventListener('input', () => {
+    if (mode !== 'edit') return;
+    state.title = $('title').value;
+    document.title = state.title ? `${state.title} · Wedding Timeline` : 'Wedding Timeline';
+    saveLocal(); cloudDirty();
+  });
+  $('title').addEventListener('keydown', e => { if (e.key === 'Enter') $('title').blur(); });
+  $('date').addEventListener('change', () => { if (mode !== 'edit') return; state.date = $('date').value; commit(); });
+
+  // ---------- items ----------
+  let editing = null;   // item id, or null when adding
+  let pickRoles = [];
+  function openItem(id, preset) {
+    if (mode !== 'edit') return;
+    const it = id && state.items.find(x => x.id === id);
+    editing = it ? it.id : null;
+    const last = sorted().at(-1);
+    const src = it || preset || { time: last ? hhmm(toMin(last.time) + last.dur) : '15:00', dur: 30, title: '', place: '', notes: '', roles: filter ? [filter] : [] };
+    $('itemHead').textContent = it ? 'Edit' : 'Add to the timeline';
+    $('fTime').value = src.time; $('fDur').value = src.dur;
+    $('fTitle').value = src.title; $('fPlace').value = src.place; $('fNotes').value = src.notes;
+    pickRoles = src.roles.slice();
+    renderPick();
+    $('fDelete').hidden = $('fDup').hidden = !it;
+    openModal('itemModal');
+    if (!it || matchMedia('(hover:hover)').matches) $('fTitle').focus();
+  }
+  function renderPick() {
+    $('fRoles').innerHTML = state.roles.map(r => `<button type="button" class="chip${pickRoles.includes(r.id) ? ' on' : ''}" data-role="${r.id}" style="--c:${r.color}"><i></i>${esc(r.name)}</button>`).join('') +
+      `<input id="fNewRole" placeholder="+ New role" maxlength="40" aria-label="New role">`;
+  }
+  $('fRoles').addEventListener('click', e => {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    const id = b.dataset.role;
+    pickRoles = pickRoles.includes(id) ? pickRoles.filter(x => x !== id) : [...pickRoles, id];
+    b.classList.toggle('on');
+  });
+  $('fRoles').addEventListener('keydown', e => {
+    if (e.target.id !== 'fNewRole' || e.key !== 'Enter') return;
+    e.preventDefault();
+    const r = addRole(e.target.value);
+    if (!r) return;
+    pickRoles.push(r.id);
+    renderPick();
+    $('fNewRole').focus();
+  });
+  function readForm() {
+    return {
+      time: $('fTime').value || '15:00',
+      dur: Math.max(0, Math.min(1440, Math.round(+$('fDur').value || 0))),
+      title: $('fTitle').value.trim(), place: $('fPlace').value.trim(), notes: $('fNotes').value.trim(),
+      roles: pickRoles.filter(roleById),
+    };
+  }
+  $('itemForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const data = readForm();
+    if (editing) Object.assign(state.items.find(x => x.id === editing), data);
+    else state.items.push({ id: rid(), ...data });
+    const id = editing || state.items.at(-1).id;
+    closeModals();
+    commit();
+    reveal(id);
+  });
+  $('fDelete').onclick = () => {
+    const snap = snapshot(), it = state.items.find(x => x.id === editing);
+    state.items = state.items.filter(x => x !== it);
+    closeModals(); commit();
+    flash(`Deleted “${it.title || 'Untitled'}”`, { undo: snap });
+  };
+  $('fDup').onclick = () => {
+    const data = readForm();
+    closeModals();
+    openItem(null, { ...data, time: hhmm(toMin(data.time) + data.dur) });
+  };
+  $('fCancel').onclick = closeModals;
+  $('timeline').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openItem(c.parentElement.dataset.id); });
+  $('timeline').addEventListener('keydown', e => {
+    const c = e.target.closest('.card');
+    if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openItem(c.parentElement.dataset.id); }
+  });
+  $('addItem').onclick = $('startBlank').onclick = () => openItem(null);
+
+  // ---------- roles ----------
+  function addRole(name) {
+    name = name.trim();
+    if (!name) return null;
+    const have = state.roles.find(r => r.name.toLowerCase() === name.toLowerCase());
+    if (have) return have;
+    const used = new Set(state.roles.map(r => r.color));
+    const r = { id: rid(), name: name.slice(0, 40), color: COLORS.find(c => !used.has(c)) || COLORS[state.roles.length % COLORS.length] };
+    state.roles.push(r);
+    commit();
+    return r;
+  }
+  function openRoles() { renderRoles(); openModal('rolesModal'); $('newRole').focus(); }
+  function renderRoles() {
+    $('roleList').innerHTML = state.roles.map(r => `<li data-id="${r.id}">
+      <button type="button" class="sw" style="--c:${r.color}" title="Change the color"></button>
+      <input value="${esc(r.name)}" maxlength="40" aria-label="Role name">
+      <button type="button" class="icon ghost del" title="Delete this role"><svg class="i"><use href="#i-x"/></svg></button></li>`).join('') ||
+      '<li class="muted">No roles yet.</li>';
+  }
+  $('roleAdd').addEventListener('submit', e => { e.preventDefault(); if (addRole($('newRole').value)) { $('newRole').value = ''; renderRoles(); } });
+  $('roleList').addEventListener('click', e => {
+    const li = e.target.closest('li[data-id]');
+    if (!li) return;
+    const r = roleById(li.dataset.id);
+    if (e.target.closest('.sw')) {
+      r.color = COLORS[(COLORS.indexOf(r.color) + 1) % COLORS.length];
+      commit(); renderRoles();
+    } else if (e.target.closest('.del')) {
+      const snap = snapshot();
+      state.roles = state.roles.filter(x => x !== r);
+      state.items.forEach(it => { it.roles = it.roles.filter(x => x !== r.id); });
+      commit(); renderRoles();
+      flash(`Deleted the role “${r.name}”`, { undo: snap });
+    }
+  });
+  $('roleList').addEventListener('change', e => {
+    const li = e.target.closest('li[data-id]'), name = e.target.value.trim();
+    if (!li || !name) return;
+    roleById(li.dataset.id).name = name.slice(0, 40);
+    commit();
+  });
+  $('rolesDone').onclick = closeModals;
+
+  // ---------- template ----------
+  $('useTemplate').onclick = () => {
+    const snap = snapshot();
+    const ids = {};
+    for (const name of ['Couple', 'Wedding party', 'Family', 'Photographer', 'DJ', 'Venue & catering']) ids[name] = addRole(name).id;
+    const R = (...names) => names.map(n => ids[n]);
+    const T = [
+      ['12:00', 90, 'Hair & makeup', 'Bridal suite', '', R('Couple', 'Wedding party')],
+      ['13:30', 60, 'Getting-ready photos', 'Bridal suite', 'Details: rings, invitation, shoes, flowers.', R('Photographer', 'Couple', 'Wedding party')],
+      ['14:30', 25, 'Guests arrive', '', 'Ushers seat guests; prelude music.', R('Venue & catering', 'Wedding party', 'DJ')],
+      ['15:00', 30, 'Ceremony', 'Garden', '', []],
+      ['15:30', 45, 'Family & group photos', '', 'Shot list:\n- Couple with each set of parents\n- Immediate families\n- Wedding party', R('Photographer', 'Couple', 'Family', 'Wedding party')],
+      ['15:30', 60, 'Cocktail hour', 'Terrace', '', R('Venue & catering', 'DJ')],
+      ['16:30', 10, 'Grand entrance', 'Reception hall', '', R('DJ', 'Couple', 'Wedding party')],
+      ['16:45', 60, 'Dinner', 'Reception hall', '', R('Venue & catering')],
+      ['17:45', 20, 'Toasts', '', 'Best man, maid of honor, then parents.', R('DJ', 'Wedding party', 'Family', 'Photographer')],
+      ['18:10', 10, 'First dance', '', 'Song:', R('Couple', 'DJ', 'Photographer')],
+      ['18:20', 15, 'Parent dances', '', '', R('Couple', 'Family', 'DJ', 'Photographer')],
+      ['18:40', 15, 'Cake cutting', '', '', R('Couple', 'Venue & catering', 'Photographer')],
+      ['18:55', 185, 'Open dancing', '', '', R('DJ')],
+      ['22:00', 15, 'Last dance & send-off', 'Front steps', 'Sparklers handed out at 21:50.', []],
+    ];
+    state.items.push(...T.map(([time, dur, title, place, notes, roles]) => ({ id: rid(), time, dur, title, place, notes, roles })));
+    commit();
+    flash('Added a typical day. Tap any item to change it', { undo: snap });
+  };
+
+  // ---------- backup ----------
+  $('exportBtn').onclick = () => {
+    closeMenu();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' }));
+    a.download = `wedding-timeline-${state.date || new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $('importBtn').onclick = () => { closeMenu(); $('importFile').click(); };
+  $('importFile').onchange = async () => {
+    const f = $('importFile').files[0];
+    $('importFile').value = '';
+    if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (!Array.isArray(d.items)) throw new Error();
+      const snap = snapshot();
+      state = normalize(d);
+      commit();
+      flash(`Opened ${f.name}`, { undo: snap });
+    } catch { flash('That file isn\'t a timeline backup', { error: true }); }
+  };
+  $('resetBtn').onclick = () => {
+    closeMenu();
+    const snap = snapshot();
+    state = blank();
+    commit();
+    flash('Started over', { undo: snap });
+  };
+  $('ownBtn').onclick = () => { location.hash = ''; };
+  const closeMenu = () => { $('menu').open = false; };
+  document.addEventListener('click', e => { if (!e.target.closest('#menu')) closeMenu(); });
+
+  // ---------- modals ----------
+  function openModal(id) { closeMenu(); $(id).classList.add('open'); }
+  function closeModals() { document.querySelectorAll('.modal-back.open').forEach(m => m.classList.remove('open')); }
+  document.querySelectorAll('.modal-back').forEach(m => m.addEventListener('mousedown', e => { if (e.target === m) closeModals(); }));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeModals(); closeMenu(); return; }
+    const typing = e.target.closest('input, textarea, select, [contenteditable]');
+    if (typing || e.ctrlKey || e.metaKey || e.altKey || document.querySelector('.modal-back.open')) return;
+    if (e.key.toLowerCase() === 'n' && mode === 'edit') { e.preventDefault(); openItem(null); }
+  });
+
+  // ---------- online copy ----------
+  // The timeline lives in the wedding API (a Cloudflare Worker, see the WeddingApi project) as well as in localStorage.
+  // #edit=<id>.<key> opens it for editing on another device; #view=<id> is the read-only link (optionally &role=<name>).
+  // Each save carries the version it was based on; if someone else saved first, theirs is loaded (Undo brings yours back).
+  const API = 'https://wedding-api.brestel-jason-e99.workers.dev/docs';
+  let cloud = null;               // { id, key, version, dirty }; key is missing on a view link
+  let pushTimer, pushing = false, edits = 0;
+
+  const saveCloud = () => {
+    if (mode !== 'edit') return;
+    try { cloud ? localStorage.setItem(CLOUD_KEY, JSON.stringify(cloud)) : localStorage.removeItem(CLOUD_KEY); } catch {}
+  };
+  const base = () => location.origin + location.pathname;
+  function cloudStatus(text, title) { $('shareLabel').textContent = text; $('share').title = title; }
+  function showCloud() {
+    if (mode === 'view') cloudStatus('Share', 'Get the read-only link');
+    else if (!cloud) cloudStatus('Share', 'Save online to open on other devices and share');
+    else if (cloud.dirty) cloudStatus('Saving…', 'Saving your changes online');
+    else cloudStatus('Saved online', 'Saved online · click for the links');
+  }
+  function applyRemote(doc, msg) {
+    const snap = snapshot();
+    state = normalize(doc.data);
+    cloud.version = doc.version;
+    cloud.dirty = false;
+    loaded = true;
+    if (mode === 'view') applyWantedRole();
+    saveLocal(); saveCloud(); render(); showCloud();
+    if (msg) flash(msg, mode === 'edit' ? { undo: snap } : {});
+  }
+  function cloudDirty() {
+    if (!cloud || mode !== 'edit') return;
+    edits++;
+    cloud.dirty = true;
+    saveCloud(); showCloud();
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(push, 1500);
+  }
+  async function push() {
+    if (!cloud || !cloud.dirty) return;
+    if (pushing) { pushTimer = setTimeout(push, 500); return; }
+    pushing = true;
+    const at = edits, c = cloud;
+    try {
+      const res = await fetch(`${API}/${c.id}`, {
+        method: 'PUT', headers: { Authorization: `Bearer ${c.key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version: c.version, data: state }),
+      });
+      if (c !== cloud) return;
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        cloud.version = body.version;
+        if (at === edits) cloud.dirty = false;
+        saveCloud(); showCloud();
+        if (cloud.dirty) pushTimer = setTimeout(push, 300);
+      } else if (res.status === 409) {
+        applyRemote(body.current, 'Someone else saved changes first · their timeline is loaded');
+      } else {
+        cloudStatus('Not saved online', body.error === 'Wrong key' ? 'This link no longer allows saving' : `Saving online failed (${res.status})`);
+        flash('Could not save online: ' + (body.error || res.status), { error: true });
+      }
+    } catch {
+      cloudStatus('Offline', 'Saved on this device; will save online when the connection is back');
+      pushTimer = setTimeout(push, 10000);
+    } finally {
+      pushing = false;
+    }
+  }
+  const busy = () => document.querySelector('.modal-back.open') || document.activeElement === $('title');
+  async function pull(force) {
+    if (!cloud || cloud.dirty || pushing || (!force && (document.hidden || busy()))) return;
+    try {
+      const c = cloud;
+      const res = await fetch(`${API}/${c.id}`);
+      if (c !== cloud) return;
+      if (res.status === 404) {
+        loaded = true; render();
+        cloudStatus('Not found', 'The online copy is gone');
+        flash('This timeline was not found online', { error: true });
+        return;
+      }
+      const doc = await res.json();
+      if (!res.ok) throw new Error();
+      if (doc.kind !== 'timeline') { loaded = true; render(); flash('That link isn\'t a wedding timeline', { error: true }); return; }
+      if (mode === 'view') $('updated').textContent = '· updated ' + new Date(doc.updatedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      if (!cloud.dirty && doc.version !== cloud.version) {
+        const first = cloud.version === 0;
+        applyRemote(doc, mode === 'view' ? null : first ? 'Opened the online timeline' : 'Loaded changes made on another device');
+      }
+    } catch {
+      cloudStatus('Offline', mode === 'view' ? 'Can\'t reach the online timeline right now' : 'Saved on this device; will save online when the connection is back');
+    }
+  }
+
+  // Share modal
+  function viewUrl() {
+    const r = roleById($('viewRole').value);
+    return `${base()}#view=${cloud.id}${r ? '&role=' + encodeURIComponent(r.name) : ''}`;
+  }
+  $('share').onclick = () => {
+    $('shareOff').hidden = !!cloud;
+    $('shareOn').hidden = !cloud;
+    if (cloud) {
+      $('viewRole').innerHTML = '<option value="">The whole day (everyone)</option>' + state.roles.map(r => `<option value="${r.id}">Only ${esc(r.name)}'s part</option>`).join('');
+      $('viewRole').value = filter || '';
+      if (mode === 'edit') $('editLink').value = `${base()}#edit=${cloud.id}.${cloud.key}`;
+      $('viewLink').value = viewUrl();
+    }
+    openModal('shareModal');
+  };
+  $('viewRole').onchange = () => { $('viewLink').value = viewUrl(); };
+  $('shareModal').addEventListener('click', async e => {
+    const b = e.target.closest('[data-copy]');
+    if (!b) return;
+    const input = $(b.dataset.copy);
+    try { await navigator.clipboard.writeText(input.value); flash('Link copied'); }
+    catch { input.select(); flash('Press Ctrl+C to copy the link'); }
+  });
+  $('shareDone').onclick = $('shareCancel').onclick = closeModals;
+  $('goOnline').onclick = async () => {
+    $('goOnline').disabled = true;
+    cloudStatus('Saving…', 'Saving online');
+    try {
+      const res = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'timeline', data: state }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || res.status);
+      cloud = { id: body.id, key: body.key, version: body.version, dirty: false };
+      saveCloud(); showCloud();
+      closeModals();
+      $('share').click();
+    } catch (err) {
+      showCloud();
+      flash('Could not save online: ' + err.message, { error: true });
+    } finally {
+      $('goOnline').disabled = false;
+    }
+  };
+  $('unlink').onclick = () => {
+    closeModals();
+    cloud = null; clearTimeout(pushTimer);
+    saveCloud(); showCloud();
+    flash('Stopped syncing on this device. The online copy and its links still work');
+  };
+  setInterval(() => pull(false), 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(false); });
+  // Leaving with unsaved changes: one last save that outlives the page
+  window.addEventListener('pagehide', () => {
+    if (mode !== 'edit' || !cloud || !cloud.dirty) return;
+    fetch(`${API}/${cloud.id}`, {
+      method: 'PUT', keepalive: true, headers: { Authorization: `Bearer ${cloud.key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version: cloud.version, data: state }),
+    }).catch(() => {});
+  });
+
+  // ---------- start ----------
+  let wantedRole = null;
+  function applyWantedRole() {
+    if (!wantedRole) return;
+    const r = state.roles.find(r => r.name.toLowerCase() === wantedRole.toLowerCase());
+    if (r) filter = r.id;
+    wantedRole = null;
+  }
+  function start() {
+    const h = location.hash;
+    let m;
+    if ((m = h.match(/view=([A-Za-z0-9_-]{16})/))) {
+      mode = 'view';
+      loaded = false;
+      cloud = { id: m[1], version: 0, dirty: false };
+      const r = h.match(/role=([^&]+)/);
+      try { wantedRole = r ? decodeURIComponent(r[1]) : null; } catch {}
+    } else {
+      try { state = normalize(JSON.parse(localStorage.getItem(STORE))); } catch {}
+      try { cloud = JSON.parse(localStorage.getItem(CLOUD_KEY)) || null; } catch {}
+      try { filter = localStorage.getItem(FILTER_KEY) || null; } catch {}
+      if ((m = h.match(/edit=([A-Za-z0-9_-]{16})\.([A-Za-z0-9_-]{8,})/))) {
+        history.replaceState(null, '', location.pathname + location.search);
+        // Another timeline's link: this device switches to it (version 0 means "load whatever is online")
+        if (!cloud || cloud.id !== m[1]) cloud = { id: m[1], key: m[2], version: 0, dirty: false };
+        saveCloud();
+      }
+    }
+    render(); showCloud();
+    if (cloud) cloud.dirty ? push() : pull(true);
+  }
+  window.addEventListener('hashchange', () => location.reload());
+  start();
+})();
+</script>
+</body>
+</html>
