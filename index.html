@@ -168,9 +168,12 @@
   }
   body:not(.view) .card { cursor: pointer; }
   body:not(.view) .card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
-  .item.past { opacity: .5; }
-  .item.now .card { border-color: color-mix(in srgb, var(--c) 55%, white); }
-  .item.flash .card { animation: flash 1.2s; }
+  /* Items that start at the same time share one row: side by side when there's room, stacked on phones */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 12px; min-width: 0; }
+  .when .n { display: block; margin-top: 2px; color: var(--heart); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .item.past > .when, .item.past > .rail, .card.past { opacity: .5; }
+  .card.now { border-color: color-mix(in srgb, var(--c) 55%, white); }
+  .card.flash { animation: flash 1.2s; }
   @keyframes flash { 0%, 40% { box-shadow: 0 0 0 4px var(--ring); } }
   .card .t { font-weight: 600; font-size: 15px; padding-right: 56px; }
   .meta { display: flex; gap: 4px 12px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px; margin-top: 1px; }
@@ -264,7 +267,7 @@
     .filters .chip.on::before { content: "Schedule for:"; font-weight: 400; color: var(--muted); }
     .filters .chip.on i { display: none; }
     .item { break-inside: avoid; }
-    .item.past { opacity: 1; }
+    .item.past > .when, .item.past > .rail, .card.past { opacity: 1; }
     .card { box-shadow: none; }
     .badge, .prog { display: none; }
     * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -479,25 +482,41 @@
   function renderList() {
     const items = visible(), nm = isEventDay() ? nowMin() : null;
     let html = '', lastEnd = null;
+    // Items that start at the same minute share one row on the timeline
+    const groups = [];
     for (const it of items) {
-      const s = toMin(it.time), e = s + it.dur, end = endOf(it);
+      const g = groups.at(-1);
+      if (g && toMin(g[0].time) === toMin(it.time)) g.push(it); else groups.push([it]);
+    }
+    for (const group of groups) {
+      const s = toMin(group[0].time), ends = group.map(it => s + it.dur);
       if (lastEnd !== null && s - lastEnd >= 5) html += `<li class="gap"><div></div><div class="rail"></div><div class="txt">${fmtDur(s - lastEnd)} free</div></li>`;
-      lastEnd = lastEnd === null ? e : Math.max(lastEnd, e);
-      const roles = it.roles.map(roleById).filter(Boolean);
-      const st = nm === null ? '' : nm >= end ? 'past' : nm >= s ? 'now' : '';
-      const meta = [it.place ? `<span><svg class="i"><use href="#i-pin"/></svg>${esc(it.place)}</span>` : '', it.dur ? `<span>${fmtDur(it.dur)}</span>` : ''].join('');
-      const tags = roles.length ? roles.map(r => `<span class="tag" style="--c:${r.color}">${esc(r.name)}</span>`).join('')
-        : state.roles.length ? '<span class="tag all">Everyone</span>' : '';
-      html += `<li class="item ${st}" data-id="${it.id}" style="--c:${roles[0]?.color || 'var(--accent)'}">
-        <div class="when"><b>${fmtTime(s)}</b>${it.dur ? `<span>${fmtTime(e)}</span>` : ''}</div>
-        <div class="rail"></div>
-        <div class="card"${mode === 'edit' ? ' tabindex="0" role="button"' : ''}>
+      lastEnd = Math.max(lastEnd ?? s, ...ends);
+      const status = it => nm === null ? '' : nm >= endOf(it) ? 'past' : nm >= s ? 'now' : '';
+      const sameEnd = ends.every(e => e === ends[0]);
+      const cards = group.map(it => {
+        const e = s + it.dur, end = endOf(it), st = status(it);
+        const roles = it.roles.map(roleById).filter(Boolean);
+        // With several items at once, each card says when it ends unless they all end together
+        const dur = it.dur ? `${fmtDur(it.dur)}${sameEnd ? '' : ` · until ${fmtTime(e)}`}` : '';
+        const meta = [it.place ? `<span><svg class="i"><use href="#i-pin"/></svg>${esc(it.place)}</span>` : '', dur ? `<span>${dur}</span>` : ''].join('');
+        const tags = roles.length ? roles.map(r => `<span class="tag" style="--c:${r.color}">${esc(r.name)}</span>`).join('')
+          : state.roles.length ? '<span class="tag all">Everyone</span>' : '';
+        return `<div class="card ${st}" data-id="${it.id}" style="--c:${roles[0]?.color || 'var(--accent)'}"${mode === 'edit' ? ' tabindex="0" role="button"' : ''}>
           ${st === 'now' ? `<span class="badge">Now</span><div class="prog"><i style="width:${Math.round((nm - s) / (end - s) * 100)}%"></i></div>` : ''}
           <div class="t">${esc(it.title) || '<span class="muted">Untitled</span>'}</div>
           <div class="meta">${meta}</div>
           ${it.notes ? `<div class="notes">${esc(it.notes)}</div>` : ''}
           <div class="tags">${tags}</div>
-        </div></li>`;
+        </div>`;
+      }).join('');
+      const sts = group.map(status), lead = group[sts.indexOf('now')] || group[0];
+      const st = sts.includes('now') ? 'now' : sts.every(x => x === 'past') ? 'past' : '';
+      const endLbl = sameEnd && group[0].dur ? `<span>${fmtTime(ends[0])}</span>` : '';
+      html += `<li class="item ${st}" style="--c:${lead.roles.map(roleById).find(Boolean)?.color || 'var(--accent)'}">
+        <div class="when"><b>${fmtTime(s)}</b>${endLbl}${group.length > 1 ? `<span class="n">${group.length} at once</span>` : ''}</div>
+        <div class="rail"></div>
+        <div class="cards">${cards}</div></li>`;
     }
     $('timeline').innerHTML = html;
     const empty = !state.items.length;
@@ -514,6 +533,7 @@
     $('nowBtn').classList.toggle('on', showNow || today);
     if (!showNow && !today) { $('nowPanel').hidden = true; return; }
     const items = visible(), rows = [];
+    const atSameTime = first => items.filter(it => toMin(it.time) === toMin(first.time));
     const row = (k, it, extra) => `<div class="nrow" data-id="${it.id}"><span class="k">${k}</span><b>${esc(it.title || 'Untitled')}</b>` +
       `<span class="muted">${fmtTime(toMin(it.time))}${it.place ? ' · ' + esc(it.place) : ''}${extra ? ' · ' + extra : ''}</span></div>`;
     if (!state.date) {
@@ -521,20 +541,20 @@
     } else if (!today) {
       const d = daysUntil();
       rows.push(`<div class="nrow"><span class="k">${d > 0 ? 'Countdown' : 'Done'}</span><span>${d > 0 ? `The day is ${d === 1 ? 'tomorrow' : `in ${d} days`}` : 'The day has been and gone. Congratulations!'}</span></div>`);
-      if (d > 0 && items[0]) rows.push(row('First up', items[0]));
+      if (d > 0 && items[0]) atSameTime(items[0]).forEach(it => rows.push(row('First up', it)));
     } else {
       const nm = nowMin();
       const cur = items.filter(it => nm >= toMin(it.time) && nm < endOf(it));
       const next = items.find(it => toMin(it.time) > nm);
       cur.forEach(it => rows.push(row('Now', it, it.dur ? `${fmtLeft(endOf(it) - nm)} left` : '')));
-      if (next) rows.push(row(cur.length ? 'Next' : 'Up next', next, `in ${fmtLeft(toMin(next.time) - nm)}`));
+      if (next) atSameTime(next).forEach(it => rows.push(row(cur.length ? 'Next' : 'Up next', it, `in ${fmtLeft(toMin(it.time) - nm)}`)));
       if (!cur.length && !next) rows.push(`<div class="nrow"><span class="k">Done</span><span>${items.length ? 'That\'s everything on the timeline. Congratulations!' : 'Nothing on the timeline.'}</span></div>`);
     }
     $('nowPanel').innerHTML = rows.join('');
     $('nowPanel').hidden = false;
   }
   function reveal(id) {
-    const el = $('timeline').querySelector(`.item[data-id="${id}"]`);
+    const el = $('timeline').querySelector(`.card[data-id="${id}"]`);
     if (!el) return;
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
@@ -658,10 +678,10 @@
     openItem(null, { ...data, time: hhmm(toMin(data.time) + data.dur) });
   };
   $('fCancel').onclick = closeModals;
-  $('timeline').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openItem(c.parentElement.dataset.id); });
+  $('timeline').addEventListener('click', e => { const c = e.target.closest('.card'); if (c) openItem(c.dataset.id); });
   $('timeline').addEventListener('keydown', e => {
     const c = e.target.closest('.card');
-    if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openItem(c.parentElement.dataset.id); }
+    if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openItem(c.dataset.id); }
   });
   $('addItem').onclick = $('startBlank').onclick = () => openItem(null);
 
